@@ -1,5 +1,10 @@
-var Twit = require('twit')
+var Twit = require('twit');
 const booru = require('booru')
+const GENRE = [
+    "catgirl",
+    "loli",
+    "yuri"
+]
 
 var fs = require('fs'),
     path = require('path'),
@@ -18,9 +23,10 @@ function pick_random_cat_girl() {
 }
 
 function upload_random_image() {
+    let choose = ~~(Math.random() * GENRE.length);
+    var tag = GENRE[choose];
     console.log('Getting image link...')
-
-    booru.search('safebooru', ['catgirl', 'neko'], {
+    booru.search('kn', [`${tag}`, 's'], {
             limit: 1,
             random: true
         })
@@ -41,34 +47,6 @@ function upload_random_image() {
                         fs.writeFileSync('image.png', data.read());
                     });
                 }).end();
-                var image_path = path.join(__dirname, pick_random_cat_girl()),
-                    b64content = fs.readFileSync(image_path, {
-                        encoding: 'base64'
-                    });
-
-                T.post('media/upload', {
-                    media_data: b64content
-                }, function(err, data, response) {
-                    if (err) {
-                        console.log('ERROR');
-                        console.log(err);
-                    } else {
-                        console.log('Uploaded an image!');
-
-                        T.post('statuses/update', {
-                                media_ids: new Array(data.media_id_string)
-                            },
-                            function(err, data, response) {
-                                if (err) {
-                                    console.log('Error!');
-                                    console.log(err);
-                                } else {
-                                    console.log('Posted an image!');
-                                }
-                            }
-                        );
-                    }
-                });
             }
         })
         .catch(err => {
@@ -78,9 +56,47 @@ function upload_random_image() {
                 console.log(err)
             }
         })
+
+    const stats = fs.statSync("image.png")
+    const fileSizeInBytes = stats.size
+    console.log(fileSizeInBytes)
+    if (fileSizeInBytes > 3145728) {
+        console.log("Image size is too big!")
+        return false;
+        upload_random_image()
+    } else {
+        var image_path = path.join(__dirname, pick_random_cat_girl()),
+            b64content = fs.readFileSync(image_path, {
+                encoding: 'base64'
+            });
+
+        T.post('media/upload', {
+            media_data: b64content
+        }, function(err, data, response) {
+            if (err) {
+                console.log('ERROR');
+                console.log(err);
+            } else {
+                console.log('Uploaded an image!');
+
+                T.post('statuses/update', {
+                        media_ids: new Array(data.media_id_string)
+                    },
+                    function(err, data, response) {
+                        if (err) {
+                            console.log('Error!');
+                            console.log(err);
+                        } else {
+                            console.log('Posted an image!');
+                        }
+                    }
+                );
+            }
+        });
+    }
 }
 
 setInterval(
     upload_random_image,
-    3600000 //1 hour
+    1800000 //30 minutes
 );
